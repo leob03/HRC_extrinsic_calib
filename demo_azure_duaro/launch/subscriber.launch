@@ -1,0 +1,3 @@
+<launch>
+    <node pkg="demo_azure_duaro" type="subscriber_apriltag.py" name="apriltag_listener" output="screen" />
+</launch>

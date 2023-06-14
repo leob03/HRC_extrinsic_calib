@@ -1,0 +1,62 @@
+
+<launch>
+  <!-- duAro driver -->
+  <include file="$(find khi_robot_bringup)/launch/duaro_bringup.launch">
+    <arg name="ip" value="192.168.50.10" />
+  </include>
+
+  <!-- Azure driver -->
+  <include file="$(find azure_kinect_ros_driver)/launch/driver.launch" ns="azure">
+    <arg name="color_resolution" value="1080P" />
+    <arg name="fps" value="5" />
+    <arg name="overwrite_robot_description" value="false" />
+    <arg name="body_tracking_enabled" value="true" />
+  </include>
+
+  <!-- image_proc for rectification -->
+  <node
+    name="image_proc" 
+    pkg="image_proc"
+    type="image_proc"
+    ns="azure/rgb">
+  </node>
+
+  <!-- AprilTag driver -->
+  <arg name="launch_prefix" default="" /> <!-- set to value="gdbserver localhost:10000" for remote debugging -->
+  <arg name="node_namespace" default="apriltag_ros_continuous_node" />
+  <arg name="camera_name" value="azure/rgb" />
+  <!-- <arg name="image_topic" value="image_raw" /> -->
+  <arg name="image_topic" value="image_raw" />
+
+  <rosparam command="load" file="$(find apriltag_ros)/config/settings.yaml" ns="$(arg node_namespace)" />
+  <rosparam command="load" file="$(find apriltag_ros)/config/tags.yaml" ns="$(arg node_namespace)" />
+
+  <node
+      name="apriltag_ros_continuous_node"
+      pkg="apriltag_ros"    
+      type="apriltag_ros_continuous_node"
+      output="screen"
+  >
+      <remap from="image_raw" to="$(arg camera_name)/$(arg image_topic)" />
+      <remap from="camera_info" to="$(arg camera_name)/camera_info" />
+
+      <param name="tag_family"                   value="tag36h11" />
+      <param name="tag_border"                   value="1" />
+      <param name="publish_tf"                   value="true" />
+      <param name="publish_tag_detections_image" value="true" />
+  </node>
+
+  <!-- MoveIt -->
+  <include file="$(find khi_duaro_moveit_config)/launch/moveit_planning_execution.launch">
+  </include>
+
+  <!-- Rviz -->
+  <!-- node type="rviz" name="rviz" pkg="rviz" args="-d $(find harness_control)/launch/ur_azure_rviz.rviz" /-->
+
+  <!-- Extrinsic calibration: camera to robot -->
+  <node name="duaro_apriltag_calibration" pkg="demo_azure_duaro" type="duaro_apriltag_calib.py" respawn="true" output="screen" />
+
+  <!-- Terminal & receptacle publishers -->
+  <!-- <node name="terminal_receptacle_broadcaster" pkg="robo_harness" type="terminal_receptacle_broadcaster.py" respawn="true" /> -->
+
+</launch>
